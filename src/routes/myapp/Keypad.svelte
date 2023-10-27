@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import CellInput from './CellInput.svelte';
 
 	export let value = '';
 
@@ -10,23 +11,31 @@
 	const clear = () => (value = '');
 	const submit = () => dispatch('submit');
 
-	let data = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 
-				'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 
-				'u', 'v', 'w', 'x', 'y', 'z'];
+	const arr = new Array(50).fill(null).map(() => new Array(18).fill(''));
+	const arr2 = new Array(50).fill(null).map(() => new Array(18).fill(''));
+
+	// セルごとに参照先（親）、こちらを参照しているセル（子）の値を保持する
+	let row = 0;
+	let col = 0;
+	let v = 0;
+	function test(e) {
+		v = e.target.value;
+		row = e.target.parentElement.parentElement.rowIndex;
+		col = e.target.parentElement.cellIndex;
+		const i = row - 1;
+		const j = col - 1;
+		var input = document.getElementById((i * 19 + j).toString());
+		arr[i][j] = v;
+	}
+
 </script>
-
-<div class="keypad">
-	{#each {length: 50} as _, i}
-		{#each {length: 18} as _, j}
-			<input value='' placeholder={String.fromCharCode(j + 65) + (i+1)} />
-		{/each}
-	{/each}
-</div>
-
+row {row} col {col} v {v}
+arr[0][0] {arr[0][0]}
 <div>
 	<table>
 		<thead>
 			<tr>
+				<th></th>
 				{#each {length: 18} as _, i}
 					<th>{String.fromCharCode(i + 65)}</th>
 				{/each}
@@ -35,8 +44,12 @@
 		<tbody>
 			{#each {length: 50} as _, i}
 				<tr>
+					<th>{i + 1}</th>
 					{#each {length: 18} as _, j}
-						<td><input value='' /></td>
+						<td on:click={test}>
+							<!-- <input id={i * 19 + j}.toString() value={arr[i][j]} on:keydown={test} type="hidden" /> -->
+							<CellInput />
+						</td>
 					{/each}
 				</tr>
 			{/each}
@@ -45,6 +58,16 @@
 </div>
 
 <style>
+	table {
+		border-collapse: collapse;
+		border-spacing: 0;
+		border: 1px solid gray;
+	}
+	td, th, input {
+		padding: 0;
+		width: 6em;
+		border: 0.1px solid gray;
+	}
 	.keypad {
 		display: grid;
         justify-content: center;
