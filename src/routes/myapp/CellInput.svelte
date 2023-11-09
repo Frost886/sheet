@@ -1,6 +1,7 @@
 <script>
     let isEditing = false;
-    let cellValue = '';
+    let value = '';
+    let rawValue = '';
 
     function handleClick() {
         isEditing = true;
@@ -13,9 +14,9 @@
 
 <div class="cell" on:click={handleClick}>
     {#if isEditing}
-        <input type="text" bind:value={cellValue} on:blur={handleBlur} autofocus>
+        <input type="text" bind:value={value} on:blur={handleBlur} autofocus>
     {:else}
-        {cellValue}
+        {value}
     {/if}
 </div>
 

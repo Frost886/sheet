@@ -4,7 +4,7 @@
 </svelte:head>
 
 <script>
-	import Keypad from './Keypad.svelte';
+	import Sheet from './Sheet.svelte';
 
 	let pin = '';
 	$: view = pin ? pin.replace(/\d(?!$)/g, '•') : 'enter your pin';
@@ -14,7 +14,7 @@
 	}
 </script>
 
-<Keypad bind:value={pin} on:submit={handleSubmit} />
+<Sheet bind:value={pin} on:submit={handleSubmit} />
 
 <style>
 	h1 {
