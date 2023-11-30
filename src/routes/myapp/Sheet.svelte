@@ -6,7 +6,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	// @ts-ignore
 	const select = (num) => () => (value += num);
 	const clear = () => (value = '');
 	const submit = () => dispatch('submit');
@@ -24,6 +23,7 @@
 	// セルごとに参照先（親）、こちらを参照しているセル（子）の値を保持する
 
 	function parseCellReference(str) {
+		str = str.toUpperCase();
 		const row = parseInt(str.match(/\d+/)[0], 10) - 1;
 		const col = str.match(/[A-Z]+/)[0].split('').reduce((acc, char) => acc * 26 + char.charCodeAt(0) - 65 + 1, 0) - 1;
 		return cells[row][col];
@@ -34,6 +34,66 @@
 		updateValue(cell);
 	}
 
+	//
+	// Tokenizer
+	//
+	const TK = Object.freeze({
+		PUNCT: 0,
+		NUM: 1,
+		VAR: 2,
+		EOF: 3,
+	});
+
+	class Token {
+		constructor(type, str = '', value = 0) {
+			this.type = type;
+			this.next = null;
+			this.str = str;
+			this.value = value;
+		}
+	}
+
+	function tokenize(str) {
+		let head = new Token(null);
+		let cur = head;
+		let i = 0;
+		let hasError = false;
+		let refs = new Set();
+		while (i < str.length) {
+			const s = str.slice(i);
+			// skip whitespace
+			if (/^\s/.test(s)) {
+				i++;
+				continue;
+			}
+			// punctuators
+			if (/^[+\-*/()]/.test(s)) {
+				cur = cur.next = new Token(TK.PUNCT, s[0]);
+				i++;
+				continue;
+			}
+			// number
+			if (/^\d+(\.\d+)?|\.\d+/.test(s)) {
+				const value = s.match(/^\d+/)[0];
+				cur = cur.next = new Token(TK.NUM, value, parseFloat(value));
+				i += value.length;
+				continue;
+			}
+			// variable
+			if (/^[a-zA-Z]\d+/.test(s)) {
+				const value = s.match(/^[a-zA-Z]\d+/)[0];
+				cur = cur.next = new Token(TK.VAR, value);
+				refs.add(value);
+				i += value.length;
+				continue;
+			}
+			hasError = true;
+			break;
+		}
+		cur.next = new Token(TK.EOF);
+		return { hasError, tok: head.next, refs };
+	}
+
 	function updateValue(cell) {
 		let rawValue = cell.rawValue;
 		for (const parent of cell.parents) {
@@ -42,19 +102,22 @@
 		cell.hasError = false;
 		cell.parents = [];
 		if (rawValue[0] === '=') {
-			rawValue = rawValue.slice(1).toUpperCase();
-			const refs = rawValue.match(/[A-Z]\d+/g);
-			if (refs) {
-				// refs.forEach(ref => {
-				// 	const cell = parseCellReference(ref);
-				// 	cell.children.push(cell);
-				// 	cells[i][j].parents.push(cell);
-				// });
-				const parent = parseCellReference(refs[0]);
-				cell.parents.push(parent);
-				parent.children.push(cell);
-
-				if (hasCycle(cell)) {
+			rawValue = rawValue.slice(1);
+			const { hasError, tok, refs } = tokenize(rawValue);
+			if (hasError) {
+				cell.value = rawValue;
+			} else if (refs.size > 0) {
+				for (const ref of refs) {
+					const parent = parseCellReference(ref);
+					cell.parents.push(parent);
+					parent.children.push(cell);
+				}
+				
+				let visited = new Set();
+				if (hasCycle(cell, visited)) {
+					for (const cell of visited) {
+						cell.hasError = true;
+					}
 					cells = [...cells];
 					return;
 				}
@@ -67,7 +130,7 @@
 				}
 				cell.value = cell.parents[0].value;
 			} else {
-				cell.value = cell.rawValue;
+				cell.value = rawValue;
 			}
 		} else {
 			cell.value = rawValue;
@@ -81,18 +144,16 @@
 
 	function hasCycle(cell, visited = new Set()) {
 		if (visited.has(cell)) {
-			cell.hasError = true;
 			return true;
 		}
 		visited.add(cell);
+		let hasCycle_ = false;
 		for (const child of cell.children) {
 			if (hasCycle(child, visited)) {
-				child.hasError = true;
-				return true;
+				hasCycle_ = true;
 			}
 		}
-		visited.delete(cell);
-		return false;
+		return hasCycle_;
 	}
 
 </script>
