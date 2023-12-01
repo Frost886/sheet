@@ -53,6 +53,8 @@
 		}
 	}
 
+	let tok = null;
+
 	function tokenize(str) {
 		let head = new Token(null);
 		let cur = head;
@@ -74,7 +76,7 @@
 			}
 			// number
 			if (/^\d+(\.\d+)?|\.\d+/.test(s)) {
-				const value = s.match(/^\d+/)[0];
+				const value = s.match(/^\d+(\.\d+)?|\.\d+/)[0];
 				cur = cur.next = new Token(TK.NUM, value, parseFloat(value));
 				i += value.length;
 				continue;
@@ -91,7 +93,88 @@
 			break;
 		}
 		cur.next = new Token(TK.EOF);
-		return { hasError, tok: head.next, refs };
+		tok = head.next;
+		return { hasError, refs };
+	}
+
+	function consume(op) {
+		if (tok.type !== TK.PUNCT || tok.str !== op) {
+			return false;
+		}
+		tok = tok.next;
+		return true;
+	}
+
+	//
+	// Parser
+	//
+	function parse() {
+		let hasError = false;
+		try {
+			const value = expr();
+			if (tok.type !== TK.EOF) {
+				throw new Error('extra token');
+			}
+			return { value, hasError };
+		} catch (e) {
+			hasError = true;
+			return { value: e.message, hasError };
+		}
+	}
+
+	// expr = term ("+" term | "-" term)*
+	function expr() {
+		let value = term();
+		while (true) {
+			if (consume('+')) {
+				value += term();
+			} else if (consume('-')) {
+				value -= term();
+			} else {
+				return value;
+			}
+		}
+	}
+
+	// term = factor ("*" factor | "/" factor)*
+	function term() {
+		let value = factor();
+		while (true) {
+			if (consume('*')) {
+				value *= factor();
+			} else if (consume('/')) {
+				value /= factor();
+			} else {
+				return value;
+			}
+		}
+	}
+
+	// factor = num | var | "(" expr ")"
+	function factor() {
+		if (tok.type === TK.NUM) {
+			const value = tok.value;
+			tok = tok.next;
+			return value;
+		}
+		if (tok.type === TK.VAR) {
+			const ref = tok.str;
+			const str = parseCellReference(ref).value;
+			let value = 0;
+			if (/^\d+(\.\d+)?|\.\d+$/.test(str)) {
+				value = parseFloat(str);
+			}
+			tok = tok.next;
+			return value;
+		}
+		if (consume('(')) {
+			const value = expr();
+			if (!consume(')')) {
+				throw new Error('missing )');
+			}
+			return value;
+		}
+		throw new Error('unexpected token');
 	}
 
 	function updateValue(cell) {
@@ -103,34 +186,44 @@
 		cell.parents = [];
 		if (rawValue[0] === '=') {
 			rawValue = rawValue.slice(1);
-			const { hasError, tok, refs } = tokenize(rawValue);
+			const { hasError, refs } = tokenize(rawValue);
 			if (hasError) {
 				cell.value = rawValue;
-			} else if (refs.size > 0) {
-				for (const ref of refs) {
-					const parent = parseCellReference(ref);
-					cell.parents.push(parent);
-					parent.children.push(cell);
-				}
-				
-				let visited = new Set();
-				if (hasCycle(cell, visited)) {
-					for (const cell of visited) {
-						cell.hasError = true;
-					}
-					cells = [...cells];
-					return;
-				}
-				// 親セルにエラーがある場合は、子セルもエラーにする
-				for (const parent of cell.parents) {
-					if (parent.hasError) {
-						cell.hasError = true;
-						break;
-					}
-				}
-				cell.value = cell.parents[0].value;
 			} else {
-				cell.value = rawValue;
+				// 循環参照のチェック
+				if (refs.size > 0) {
+					for (const ref of refs) {
+						const parent = parseCellReference(ref);
+						cell.parents.push(parent);
+						parent.children.push(cell);
+					}
+					
+					let visited = new Set();
+					if (hasCycle(cell, visited)) {
+						for (const cell of visited) {
+							cell.hasError = true;
+						}
+						cells = [...cells];
+						return;
+					}
+					// 親セルにエラーがある場合は、子セルもエラーにする
+					for (const parent of cell.parents) {
+						if (parent.hasError) {
+							cell.hasError = true;
+							break;
+						}
+					}
+					cell.value = cell.parents[0].value;
+				}
+				// 計算
+				if (!cell.hasError) {
+					const { value, hasError } = parse();
+					if (hasError) {
+						cell.value = rawValue;
+					} else {
+						cell.value = value;
+					}
+				}
 			}
 		} else {
 			cell.value = rawValue;
