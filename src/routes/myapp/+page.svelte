@@ -5,28 +5,39 @@
 
 <script>
 	import Sheet from './Sheet.svelte';
-
-	let pin = '';
-	$: view = pin ? pin.replace(/\d(?!$)/g, '•') : 'enter your pin';
-
-	function handleSubmit() {
-		alert(`submitted ${pin}`);
-	}
 </script>
 
-<Sheet bind:value={pin} on:submit={handleSubmit} />
-
+<div class="container">
+	<Sheet/>
+</div>
 <style>
-	h1 {
-		color: #ccc;
+	.sheet {
+		display: flex;
+		justify-content: left;
+		width: 100%;
 	}
-	h1.pin {
-		color: #333;
+
+	.container {
+		max-height: 50em;
+		border: 1px solid #dadada;
+		overflow: scroll;
+		overflow-x: scroll;
+		overflow-y: scroll;
 	}
-	:global(body.dark) h1 {
-		color: #444;
+
+	/* Overwrite the default to keep the scrollbar always visible */
+
+	::-webkit-scrollbar {
+		-webkit-appearance: none;
+		width: 7px;
+		height: 7px;
 	}
-	:global(body.dark) h1.pin {
-		color: #fff;
+
+	::-webkit-scrollbar-thumb {
+		border-radius: 4px;
+		background-color: rgba(0, 0, 0, 0.5);
+		-webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 	}
+
+
 </style>

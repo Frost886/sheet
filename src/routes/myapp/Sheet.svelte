@@ -11,14 +11,29 @@
 	const submit = () => dispatch('submit');
 
 	let cells = new Array(50).fill(null).map(() =>
-		new Array(20).fill(null).map(() => ({
+		new Array(26).fill(null).map(() => ({
 			value: '',
 			rawValue: '',
 			parents: [],
 			children: [],
-			hasError : false
+			hasError : false,
+			isSelected: false,
+			up: undefined,
+			down: undefined,
+			left: undefined,
+			right: undefined,
 		}))
 	);
+
+	// up, down, left, rightの参照を設定する
+	for (let i = 0; i < cells.length; i++) {
+		for (let j = 0; j < cells[i].length; j++) {
+			cells[i][j].up = cells[i - 1]?.[j];
+			cells[i][j].down = cells[i + 1]?.[j];
+			cells[i][j].left = cells[i]?.[j - 1];
+			cells[i][j].right = cells[i]?.[j + 1];
+		}
+	}
 
 	// セルごとに参照先（親）、こちらを参照しているセル（子）の値を保持する
 
@@ -82,6 +97,7 @@
 				continue;
 			}
 			// variable
+			// ここでnumかstrに変換するのが良さそう
 			if (/^[a-zA-Z]\d+/.test(s)) {
 				const value = s.match(/^[a-zA-Z]\d+/)[0];
 				cur = cur.next = new Token(TK.VAR, value);
@@ -219,7 +235,7 @@
 				if (!cell.hasError) {
 					const { value, hasError } = parse();
 					if (hasError) {
-						cell.value = rawValue;
+						cell.hasError = true;
 					} else {
 						cell.value = value;
 					}
@@ -264,9 +280,9 @@
 			<tr>
 				<th>{i + 1}</th>
 				{#each row as cell, j}
-					<td>
+					<!-- <td> -->
 						<CellInput bind:cell={cell} on:change={onRawValueChanged} />
-					</td>
+					<!-- </td> -->
 				{/each}
 			</tr>
 		{/each}
@@ -278,12 +294,18 @@
 		border-collapse: collapse;
 		border-spacing: 0;
 		border: 1px solid gray;
+		background-color: white;
 	}
-	td, th, input {
+	th {
+		padding: 0;
+		width: 6em;
+		border: 1px solid gray;
+	}
+	/* td{
 		padding: 0;
 		width: 6em;
 		border: 0.1px solid gray;
-	}
+	} */
 	.keypad {
 		display: grid;
         justify-content: center;
