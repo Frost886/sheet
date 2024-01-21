@@ -3,24 +3,16 @@
 
 	import { createEventDispatcher } from "svelte";
 
-    // let isSelected = false;
     export let cell;
     let isComposing = false;
-    let isEditing = false;
     const dispatch = createEventDispatcher();
 
     function handleClick() {
         cell.isSelected = true;
     }
 
-    function handleDoubleClick() {
-        cell.isSelected = false;
-        isEditing = true;
-    }
-
     function handleBlur() {
         cell.isSelected = false;
-        // cell.value = cell.rawValue;
         dispatch('change', {
             cell
         });
@@ -31,48 +23,31 @@
             return;
         }
 
-        if (cell.isSelected) {
-
-        }
-
         if (event.key === 'Enter') {
-            cell.isSelected = false;
-            dispatch('change', {
-                cell
-            });
-            //if (event.)
-            cell.down.isSelected = true;
-        } else if (event.key === 'Tab' && cell.right !== undefined) {
-            cell.isSelected = false;
-            dispatch('change', {
-                cell
-            });
-            cell.right.isSelected = true;
+            if (event.shiftKey) {
+                if (cell.up !== undefined) {
+                    handleBlur();
+                    cell.up.isSelected = true;
+                }
+            } else {
+                if (cell.down !== undefined) {
+                    handleBlur();
+                    cell.down.isSelected = true;
+                }
+            }
+        } else if (event.key === 'Tab') {
+            if (event.shiftKey) {
+                if (cell.left !== undefined) {
+                    handleBlur();
+                    cell.left.isSelected = true;
+                }
+            } else {
+                if (cell.right !== undefined) {
+                    handleBlur();
+                    cell.right.isSelected = true;
+                }
+            }
             event.preventDefault();
-        } else if (event.key === 'ArrowDown' && cell.down !== undefined) {
-            cell.isSelected = false;
-            dispatch('change', {
-                cell
-            });
-            cell.down.isSelected = true;
-        } else if (event.key === 'ArrowUp' && cell.up !== undefined) {
-            cell.isSelected = false;
-            dispatch('change', {
-                cell
-            });
-            cell.up.isSelected = true;
-        } else if (event.key === 'ArrowLeft' && cell.left !== undefined) {
-            cell.isSelected = false;
-            dispatch('change', {
-                cell
-            });
-            cell.left.isSelected = true;
-        } else if (event.key === 'ArrowRight' && cell.right !== undefined) {
-            cell.isSelected = false;
-            dispatch('change', {
-                cell
-            });
-            cell.right.isSelected = true;
         }
     }
 </script>
@@ -80,14 +55,16 @@
 <td>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="cell" on:click={handleClick} class:selected-cell={cell.isSelected}>
+    <div class="cell"
+        on:click={handleClick}
+        class:selected-cell={cell.isSelected}>
     {#if cell.isSelected}
         <!-- svelte-ignore a11y-autofocus -->
         <!-- svelte-ignore a11y-autofocus -->
         <input type="text"
             bind:value={cell.rawValue}
-            on:blur={handleBlur}
             on:keydown={handleKeydown}
+            on:blur={handleBlur}
             on:compositionstart={() => isComposing = true}
             on:compositionend={() => isComposing = false}
             autofocus>
