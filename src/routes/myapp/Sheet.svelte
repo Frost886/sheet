@@ -59,6 +59,22 @@
 		}
 	}
 
+	function readPunct(str) {
+		const kw2 = ["<=", ">="];
+		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":"];
+		for (const k of kw2) {
+			if (str.startsWith(k)) {
+				return k.length;
+			}
+		};
+		for (const k of kw1) {
+			if (str.startsWith(k)) {
+				return 1;
+			}
+		};
+		return 0;
+	}
+
 	let tok = null;
 
 	function tokenize(str) {
@@ -74,10 +90,11 @@
 				i++;
 				continue;
 			}
-			// punctuators
-			if (/^[+\-*/()=:]/.test(s)) {
-				cur = cur.next = new Token(TK.PUNCT, s[0]);
-				i++;
+			// punctuator
+			const punct_len = readPunct(s);
+			if (punct_len) {
+				cur = cur.next = new Token(TK.PUNCT, s.slice(0, punct_len));
+				i += punct_len;
 				continue;
 			}
 			// number
