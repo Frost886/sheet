@@ -151,8 +151,34 @@
 		}
 	}
 
-	// expr = mul ("+" mul | "-" mul)*
+	// expr = relational
 	function expr() {
+		return relational();
+	}
+
+	// relational = add ("=" add | "<" add | ">" add | "<=" add | ">=" add)*
+	// T->1, F->0
+	function relational() {
+		let value = add();
+		while (true) {
+			if (consume('=')) {
+				value = value === add() ? 1 : 0;
+			} else if (consume('<')) {
+				value = value < add() ? 1 : 0;
+			} else if (consume('>')) {
+				value = value > add() ? 1 : 0;
+			} else if (consume('<=')) {
+				value = value <= add() ? 1 : 0;
+			} else if (consume('>=')) {
+				value = value >= add() ? 1 : 0;
+			} else {
+				return value;
+			}
+		}
+	}
+
+	// add = mul ("+" mul | "-" mul)*
+	function add() {
 		let value = mul();
 		while (true) {
 			if (consume('+')) {
