@@ -134,22 +134,6 @@
 		}
 	}
 
-	// stmt = num | str | ("=" expr)
-	// function stmt() {
-	// 	if (consume('=')) {
-	// 		return expr();
-	// 	}
-	// 	if (isFloat(tok.str)) {
-	// 		const value = parseFloat(tok.str);
-	// 		tok = tok.next;
-	// 		return value;
-	// 	} else {
-	// 		let value = tok.str;
-	// 		tok = tok.next;
-	// 		return value;
-	// 	}
-	// }
-
 	// expr = mul ("+" mul | "-" mul)*
 	function expr() {
 		let value = mul();
@@ -164,18 +148,29 @@
 		}
 	}
 
-	// mul = primary ("*" primary | "/" primary)*
+	// mul = unary ("*" unary | "/" unary)*
 	function mul() {
-		let value = primary();
+		let value = unary();
 		while (true) {
 			if (consume('*')) {
-				value *= primary();
+				value *= unary();
 			} else if (consume('/')) {
-				value /= primary();
+				value /= unary();
 			} else {
 				return value;
 			}
 		}
+	}
+
+	// unary = ("+" | "-")? primary
+	function unary() {
+		if (consume('+')) {
+			return primary();
+		}
+		if (consume('-')) {
+			return -primary();
+		}
+		return primary();
 	}
 
 	// primary = num | var_num | "(" expr ")"
@@ -195,12 +190,6 @@
 			}
 			tok = tok.next;
 			return val;
-			// let value = 0;
-			// if (/^\d+(\.\d+)?|\.\d+$/.test(val)) {
-			// 	value = parseFloat(val);
-			// }
-			// tok = tok.next;
-			// return value;
 		}
 		if (consume('(')) {
 			const value = expr();
