@@ -57,7 +57,8 @@
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="cell"
         on:click={handleClick}
-        class:selected-cell={cell.isSelected}>
+        class:selected-cell={cell.isSelected}
+        class:numcell={typeof cell.value === "number"}>
     {#if cell.isSelected}
         <!-- svelte-ignore a11y-autofocus -->
         <!-- svelte-ignore a11y-autofocus -->
@@ -87,13 +88,17 @@
         width: 100px;
         height: 20px;
         line-height: 20px;
-        text-align: right;
+        text-align: left;
         overflow: hidden;
         box-sizing: border-box;
     }
 
     .selected-cell {
         border: 2px solid blue;
+    }
+
+    .numcell {
+        text-align: right;
     }
 
     input {

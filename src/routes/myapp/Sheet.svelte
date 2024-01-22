@@ -1,14 +1,5 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
 	import CellInput from './CellInput.svelte';
-
-	export let value = '';
-
-	const dispatch = createEventDispatcher();
-
-	const select = (num) => () => (value += num);
-	const clear = () => (value = '');
-	const submit = () => dispatch('submit');
 
 	let cells = new Array(50).fill(null).map(() =>
 		new Array(26).fill(null).map(() => ({
@@ -84,7 +75,7 @@
 				continue;
 			}
 			// punctuators
-			if (/^[+\-*/()]/.test(s)) {
+			if (/^[+\-*/()=:]/.test(s)) {
 				cur = cur.next = new Token(TK.PUNCT, s[0]);
 				i++;
 				continue;
@@ -97,7 +88,7 @@
 				continue;
 			}
 			// variable
-			// ここでnumかstrに変換するのが良さそう
+			// (ここでnumかstrに変換するのが良さそう)やっぱりここで変換するのは良くない
 			if (/^[a-zA-Z]\d+/.test(s)) {
 				const value = s.match(/^[a-zA-Z]\d+/)[0];
 				cur = cur.next = new Token(TK.VAR, value);
@@ -121,6 +112,10 @@
 		return true;
 	}
 
+	function isFloat(str) {
+		return /^-?(\d+(\.\d+)?|\.\d+)$/.test(str);
+	}
+
 	//
 	// Parser
 	//
@@ -134,40 +129,57 @@
 			return { value, hasError };
 		} catch (e) {
 			hasError = true;
+			console.log(e.message);
 			return { value: e.message, hasError };
 		}
 	}
 
-	// expr = term ("+" term | "-" term)*
+	// stmt = num | str | ("=" expr)
+	// function stmt() {
+	// 	if (consume('=')) {
+	// 		return expr();
+	// 	}
+	// 	if (isFloat(tok.str)) {
+	// 		const value = parseFloat(tok.str);
+	// 		tok = tok.next;
+	// 		return value;
+	// 	} else {
+	// 		let value = tok.str;
+	// 		tok = tok.next;
+	// 		return value;
+	// 	}
+	// }
+
+	// expr = mul ("+" mul | "-" mul)*
 	function expr() {
-		let value = term();
+		let value = mul();
 		while (true) {
 			if (consume('+')) {
-				value += term();
+				value += mul();
 			} else if (consume('-')) {
-				value -= term();
+				value -= mul();
 			} else {
 				return value;
 			}
 		}
 	}
 
-	// term = factor ("*" factor | "/" factor)*
-	function term() {
-		let value = factor();
+	// mul = primary ("*" primary | "/" primary)*
+	function mul() {
+		let value = primary();
 		while (true) {
 			if (consume('*')) {
-				value *= factor();
+				value *= primary();
 			} else if (consume('/')) {
-				value /= factor();
+				value /= primary();
 			} else {
 				return value;
 			}
 		}
 	}
 
-	// factor = num | var | "(" expr ")"
-	function factor() {
+	// primary = num | var_num | "(" expr ")"
+	function primary() {
 		if (tok.type === TK.NUM) {
 			const value = tok.value;
 			tok = tok.next;
@@ -175,13 +187,20 @@
 		}
 		if (tok.type === TK.VAR) {
 			const ref = tok.str;
-			const str = parseCellReference(ref).value;
-			let value = 0;
-			if (/^\d+(\.\d+)?|\.\d+$/.test(str)) {
-				value = parseFloat(str);
+			const val = parseCellReference(ref).value;
+			
+			if (typeof val !== 'number') {
+				console.log(typeof val);
+				throw new Error('unexpected string');
 			}
 			tok = tok.next;
-			return value;
+			return val;
+			// let value = 0;
+			// if (/^\d+(\.\d+)?|\.\d+$/.test(val)) {
+			// 	value = parseFloat(val);
+			// }
+			// tok = tok.next;
+			// return value;
 		}
 		if (consume('(')) {
 			const value = expr();
@@ -241,6 +260,8 @@
 					}
 				}
 			}
+		} else if (isFloat(rawValue)) {
+			cell.value = parseFloat(rawValue);
 		} else {
 			cell.value = rawValue;
 		}
