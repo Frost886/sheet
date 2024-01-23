@@ -101,8 +101,9 @@
 	const TK = Object.freeze({
 		PUNCT: 0,
 		NUM: 1,
-		VAR: 2,
-		EOF: 3,
+		STR: 2,
+		VAR: 3,
+		EOF: 4,
 	});
 
 	class Token {
@@ -116,7 +117,7 @@
 
 	function readPunct(str) {
 		const kw2 = ["<=", ">="];
-		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":"];
+		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":", "&"];
 		for (const k of kw2) {
 			if (str.startsWith(k)) {
 				return k.length;
@@ -145,13 +146,6 @@
 				i++;
 				continue;
 			}
-			// punctuator
-			const punct_len = readPunct(s);
-			if (punct_len) {
-				cur = cur.next = new Token(TK.PUNCT, s.slice(0, punct_len));
-				i += punct_len;
-				continue;
-			}
 			// number
 			if (/^\d+(\.\d+)?|\.\d+/.test(s)) {
 				const value = s.match(/^\d+(\.\d+)?|\.\d+/)[0];
@@ -159,13 +153,34 @@
 				i += value.length;
 				continue;
 			}
+			// string
+			if (/^"/.test(s)) {
+				let str = s.slice(1);
+				str = str.match(/^[^"]*/)[0];
+				cur = cur.next = new Token(TK.STR, str);
+				i += str.length + 2;
+				continue;
+			}
+			if (/^'/.test(s)) {
+				let str = s.slice(1);
+				str = str.match(/^[^']*/)[0];
+				cur = cur.next = new Token(TK.STR, str);
+				i += str.length + 2;
+				continue;
+			}
 			// variable
-			// (ここでnumかstrに変換するのが良さそう)やっぱりここで変換するのは良くない
 			if (/^[a-zA-Z]\d+/.test(s)) {
 				const value = s.match(/^[a-zA-Z]\d+/)[0];
 				cur = cur.next = new Token(TK.VAR, value);
 				refs.add(value);
 				i += value.length;
+				continue;
+			}
+			// punctuator
+			const punct_len = readPunct(s);
+			if (punct_len) {
+				cur = cur.next = new Token(TK.PUNCT, s.slice(0, punct_len));
+				i += punct_len;
 				continue;
 			}
 			hasError = true;
@@ -211,21 +226,38 @@
 		return relational();
 	}
 
-	// relational = add ("=" add | "<" add | ">" add | "<=" add | ">=" add)*
+	// relational = concat ("=" concat | "<" concat | ">" concat | "<=" concat | ">=" concat)*
 	// T->1, F->0
 	function relational() {
-		let value = add();
+		let value = concat();
 		while (true) {
 			if (consume('=')) {
-				value = value === add() ? 1: 0;
+				value = value === concat() ? 1: 0;
 			} else if (consume('<')) {
-				value = value < add() ? 1 : 0;
+				value = value < concat() ? 1 : 0;
 			} else if (consume('>')) {
-				value = value > add() ? 1 : 0;
+				value = value > concat() ? 1 : 0;
 			} else if (consume('<=')) {
-				value = value <= add() ? 1 : 0;
+				value = value <= concat() ? 1 : 0;
 			} else if (consume('>=')) {
-				value = value >= add() ? 1 : 0;
+				value = value >= concat() ? 1 : 0;
+			} else {
+				return value;
+			}
+		}
+	}
+
+	// concat = add ("&" add)*
+	// str & str -> str
+	function concat() {
+		let value = add();
+		while (true) {
+			if (consume('&')) {
+				const a = add();
+				if (typeof value !== 'string' || typeof a !== 'string') {
+					throw new Error('undefined opration for &');
+				}
+				value = value + a;
 			} else {
 				return value;
 			}
@@ -233,13 +265,22 @@
 	}
 
 	// add = mul ("+" mul | "-" mul)*
+	// num op num -> num
 	function add() {
 		let value = mul();
 		while (true) {
 			if (consume('+')) {
-				value += mul();
+				const m = mul();
+				if (typeof value !== 'number' || typeof m !== 'number') {
+					throw new Error('undefined opration for +');
+				}
+				value += m;
 			} else if (consume('-')) {
-				value -= mul();
+				const m = mul();
+				if (typeof value !== 'number' || typeof m !== 'number') {
+					throw new Error('undefined opration for -');
+				}
+				value -= m;
 			} else {
 				return value;
 			}
@@ -247,13 +288,22 @@
 	}
 
 	// mul = unary ("*" unary | "/" unary)*
+	// num op num -> num
 	function mul() {
 		let value = unary();
 		while (true) {
 			if (consume('*')) {
-				value *= unary();
+				let u = unary();
+				if (typeof value !== 'number' || typeof u !== 'number') {
+					throw new Error('undefined opration for *');
+				}
+				value *= u;
 			} else if (consume('/')) {
-				value /= unary();
+				let u = unary();
+				if (typeof value !== 'number' || typeof u !== 'number') {
+					throw new Error('undefined opration for /');
+				}
+				value /= u;
 			} else {
 				return value;
 			}
@@ -263,15 +313,23 @@
 	// unary = ("+" | "-") unary | primary
 	function unary() {
 		if (consume('+')) {
-			return unary();
+			let u = unary();
+			if (typeof u !== 'number') {
+				throw new Error('undefined unary opration for +');
+			}
+			return u;
 		}
 		if (consume('-')) {
-			return -unary();
+			let u = unary();
+			if (typeof u !== 'number') {
+				throw new Error('undefined unary opration for -');
+			}
+			return -u;
 		}
 		return primary();
 	}
 
-	// primary = num | var_num | "(" expr ")"
+	// primary = num | var | '"' str '"' | "(" expr ")"
 	function primary() {
 		if (tok.type === TK.NUM) {
 			const value = tok.value;
@@ -282,12 +340,17 @@
 			const ref = tok.str;
 			const val = parseCellReference(ref).value;
 			
-			if (typeof val !== 'number') {
-				console.log(typeof val);
-				throw new Error('unexpected string');
-			}
+			// if (typeof val !== 'number') {
+			// 	console.log(typeof val);
+			// 	throw new Error('unexpected string');
+			// }
 			tok = tok.next;
 			return val;
+		}
+		if (tok.type === TK.STR) {
+			const value = tok.str;
+			tok = tok.next;
+			return value;
 		}
 		if (consume('(')) {
 			const value = expr();
