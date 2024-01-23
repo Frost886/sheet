@@ -22,15 +22,6 @@
 	//
 	let fileName = '';
 	function saveCsv() {
-		// const csv = cells.map(row =>
-		// 	row.map(cell =>
-		// 		{if (/[,\"\n]/.test(cell.rawValue)) {
-		// 			return `"${cell.rawValue.replace(/"/g, '""')}"`;
-		// 		} else {
-		// 			return cell.rawValue;
-		// 		}}
-		// 	).join(',')
-		// ).join('\n');
 		const data = cells.map(row => row.map(cell => cell.rawValue));
 		const csv = Papa.unparse(data);
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -50,44 +41,8 @@
 		input.type = 'file';
 		input.accept = '.csv';
 		input.onchange = () => {
-			// const file = input.files[0];
-			// const reader = new FileReader();
-			// reader.onload = () => {
-			// 	const csv = reader.result;
-			// 	const lines = csv.split('\n');
-			// 	const newCells = lines.map(line =>
-			// 		line.split(',').map(cell => ({
-			// 			value: '',
-			// 			rawValue: cell,
-			// 			parents: [],
-			// 			children: [],
-			// 			hasError : false,
-			// 			isSelected: false,
-			// 			up: undefined,
-			// 			down: undefined,
-			// 			left: undefined,
-			// 			right: undefined,
-			// 		}))
-			// 	);
-			// 	cells = newCells;
-			// };
-			// reader.readAsText(file);
 			Papa.parse(input.files[0], {
 				complete: function(results) {
-					// const newCells = results.data.map(line =>
-					// 	line.map(cell => ({
-					// 		value: '',
-					// 		rawValue: cell,
-					// 		parents: [],
-					// 		children: [],
-					// 		hasError : false,
-					// 		isSelected: false,
-					// 		up: undefined,
-					// 		down: undefined,
-					// 		left: undefined,
-					// 		right: undefined,
-					// 	}))
-					// );
 					for (let i = 0; i < cells.length; i++) {
 						for (let j = 0; j < cells[i].length; j++) {
 							if (results.data[i][j] === undefined) {
@@ -115,7 +70,6 @@
 			}
 		}
 	}
-
 
 	// up, down, left, rightの参照を設定する
 	for (let i = 0; i < cells.length; i++) {
@@ -306,13 +260,13 @@
 		}
 	}
 
-	// unary = ("+" | "-")? primary
+	// unary = ("+" | "-") unary | primary
 	function unary() {
 		if (consume('+')) {
-			return primary();
+			return unary();
 		}
 		if (consume('-')) {
-			return -primary();
+			return -unary();
 		}
 		return primary();
 	}
