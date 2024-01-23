@@ -103,7 +103,8 @@
 		NUM: 1,
 		STR: 2,
 		VAR: 3,
-		EOF: 4,
+		FUNC: 4,
+		EOF: 5,
 	});
 
 	class Token {
@@ -115,9 +116,19 @@
 		}
 	}
 
+	function readFunc(str) {
+		const funcs = ["IF", "NOT", "AND", "OR", "SUM", "AVERAGE", "MAX", "MIN", "COUNT"];
+		for (const f of funcs) {
+			if (str.toUpperCase().startsWith(f)) {
+				return f.length;
+			}
+		}
+		return 0;
+	}
+
 	function readPunct(str) {
 		const kw2 = ["<=", ">="];
-		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":", "&"];
+		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":", "&", ","];
 		for (const k of kw2) {
 			if (str.startsWith(k)) {
 				return k.length;
@@ -174,6 +185,13 @@
 				cur = cur.next = new Token(TK.VAR, value);
 				refs.add(value);
 				i += value.length;
+				continue;
+			}
+			// function
+			const func_len = readFunc(s);
+			if (func_len) {
+				cur = cur.next = new Token(TK.FUNC, s.slice(0, func_len));
+				i += func_len;
 				continue;
 			}
 			// punctuator
@@ -329,7 +347,7 @@
 		return primary();
 	}
 
-	// primary = num | var | '"' str '"' | "(" expr ")"
+	// primary = num | var | str | "(" expr ")" | func "(" expr ("," expr)* ")"
 	function primary() {
 		if (tok.type === TK.NUM) {
 			const value = tok.value;
@@ -339,11 +357,6 @@
 		if (tok.type === TK.VAR) {
 			const ref = tok.str;
 			const val = parseCellReference(ref).value;
-			
-			// if (typeof val !== 'number') {
-			// 	console.log(typeof val);
-			// 	throw new Error('unexpected string');
-			// }
 			tok = tok.next;
 			return val;
 		}
@@ -358,6 +371,77 @@
 				throw new Error('missing )');
 			}
 			return value;
+		}
+		if (tok.type === TK.FUNC) {
+			const func = tok.str.toUpperCase();
+			tok = tok.next;
+			if (!consume('(')) {
+				throw new Error('missing (');
+			}
+			const args = [];
+			if (!consume(')')) {
+				args.push(expr());
+				while (consume(',')) {
+					args.push(expr());
+				}
+				if (!consume(')')) {
+					throw new Error('missing )');
+				}
+			}
+			if (func === 'IF') {
+				if (args.length < 2) {
+					throw new Error('IF takes 2 or 3 arguments');
+				}
+				if (args[0] !== 0) {
+					return args[1];
+				}
+				if (args.length === 3) {
+					return args[2];
+				}
+				return 0;
+			}
+			if (func === 'NOT') {
+				if (args.length !== 1) {
+					throw new Error('NOT takes 1 argument');
+				}
+				if (typeof args[0] !== 'number') {
+					throw new Error('NOT takes number');
+				}
+				return args[0] === 0 ? 1 : 0;
+			}
+			if (func === 'AND') {
+				if (args.length === 0) {
+					throw new Error('AND takes 1 or more arguments');
+				}
+				for (const arg of args) {
+					if (typeof arg !== 'number') {
+						throw new Error('AND takes number');
+					}
+					if (arg === 0) {
+						return 0;
+					}
+				}
+				return 1;
+			}
+			if (func === 'OR') {
+				if (args.length === 0) {
+					throw new Error('OR takes 1 or more arguments');
+				}
+				for (const arg of args) {
+					if (typeof arg !== 'number') {
+						throw new Error('OR takes number');
+					}
+					if (arg !== 0) {
+						return 1;
+					}
+				}
+				return 0;
+			}
+			// if (func === 'SUM') {
+			// 	if (args.length < 1) {
+			// 		throw new Error('SUM takes 1 or more arguments');
+			// 	}
+			// 	for (const arg of args) {
 		}
 		throw new Error('unexpected token');
 	}
