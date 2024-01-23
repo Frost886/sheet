@@ -1,5 +1,6 @@
 <script>
 	import CellInput from './CellInput.svelte';
+	import Papa from 'papaparse';
 
 	let cells = new Array(50).fill(null).map(() =>
 		new Array(26).fill(null).map(() => ({
@@ -15,6 +16,106 @@
 			right: undefined,
 		}))
 	);
+
+	//
+	// Save and Load CSV
+	//
+	let fileName = '';
+	function saveCsv() {
+		// const csv = cells.map(row =>
+		// 	row.map(cell =>
+		// 		{if (/[,\"\n]/.test(cell.rawValue)) {
+		// 			return `"${cell.rawValue.replace(/"/g, '""')}"`;
+		// 		} else {
+		// 			return cell.rawValue;
+		// 		}}
+		// 	).join(',')
+		// ).join('\n');
+		const data = cells.map(row => row.map(cell => cell.rawValue));
+		const csv = Papa.unparse(data);
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		let f = fileName;
+		if (f === '') {
+			f = 'untitled';
+		}
+		a.download = `${f}.csv`;
+		a.click();
+	}
+
+	function loadCsv() {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.csv';
+		input.onchange = () => {
+			// const file = input.files[0];
+			// const reader = new FileReader();
+			// reader.onload = () => {
+			// 	const csv = reader.result;
+			// 	const lines = csv.split('\n');
+			// 	const newCells = lines.map(line =>
+			// 		line.split(',').map(cell => ({
+			// 			value: '',
+			// 			rawValue: cell,
+			// 			parents: [],
+			// 			children: [],
+			// 			hasError : false,
+			// 			isSelected: false,
+			// 			up: undefined,
+			// 			down: undefined,
+			// 			left: undefined,
+			// 			right: undefined,
+			// 		}))
+			// 	);
+			// 	cells = newCells;
+			// };
+			// reader.readAsText(file);
+			Papa.parse(input.files[0], {
+				complete: function(results) {
+					// const newCells = results.data.map(line =>
+					// 	line.map(cell => ({
+					// 		value: '',
+					// 		rawValue: cell,
+					// 		parents: [],
+					// 		children: [],
+					// 		hasError : false,
+					// 		isSelected: false,
+					// 		up: undefined,
+					// 		down: undefined,
+					// 		left: undefined,
+					// 		right: undefined,
+					// 	}))
+					// );
+					for (let i = 0; i < cells.length; i++) {
+						for (let j = 0; j < cells[i].length; j++) {
+							if (results.data[i][j] === undefined) {
+								cells[i][j].rawValue = '';
+							} else {
+								cells[i][j].rawValue = results.data[i][j];
+							}
+							cells[i][j].value = '';
+							cells[i][j].parents = [];
+							cells[i][j].children = [];
+							cells[i][j].hasError = false;
+						}
+					}
+					updateAll();
+				}
+			})
+		};
+		input.click();
+	}
+
+	function updateAll() {
+		for (const row of cells) {
+			for (const cell of row) {
+				updateValue(cell);
+			}
+		}
+	}
+
 
 	// up, down, left, rightの参照を設定する
 	for (let i = 0; i < cells.length; i++) {
@@ -162,7 +263,7 @@
 		let value = add();
 		while (true) {
 			if (consume('=')) {
-				value = value === add() ? 1 : 0;
+				value = value === add() ? 1: 0;
 			} else if (consume('<')) {
 				value = value < add() ? 1 : 0;
 			} else if (consume('>')) {
@@ -319,6 +420,11 @@
 	}
 
 </script>
+<div class="top-bar">
+	<input type="text" bind:value={fileName} placeholder="untitled" />.csv
+	<button on:click={saveCsv}>Save</button>
+	<button on:click={loadCsv}>Load</button>
+</div>
 <table>
 	<thead>
 		<tr>
@@ -359,12 +465,8 @@
 		width: 6em;
 		border: 0.1px solid gray;
 	} */
-	.keypad {
-		display: grid;
-        justify-content: center;
-		grid-template-columns: repeat(18, 5em);
-		grid-template-rows: repeat(50, 2em);
-		grid-gap: 0em;
+	.top-bar {
+		margin-right: 10px;
 	}
 
 	button {
