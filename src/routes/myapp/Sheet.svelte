@@ -117,7 +117,9 @@
 	}
 
 	function readFunc(str) {
-		const funcs = ["IF", "NOT", "AND", "OR", "SUM", "AVERAGE", "MAX", "MIN", "COUNT"];
+		const funcs = ["IF", "NOT", "AND", "OR", "FIND", "INT", "ROUND", "ABS",
+			"SUM", "AVERAGE", "MAX", "MIN", "COUNT", "COUNTIF", "INDEX",
+			"LOOKUP", "VLOOKUP", "MATCH"];
 		for (const f of funcs) {
 			if (str.toUpperCase().startsWith(f)) {
 				return f.length;
@@ -127,7 +129,7 @@
 	}
 
 	function readPunct(str) {
-		const kw2 = ["<=", ">="];
+		const kw2 = ["<=", ">=", "<>"];
 		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":", "&", ","];
 		for (const k of kw2) {
 			if (str.startsWith(k)) {
@@ -158,8 +160,8 @@
 				continue;
 			}
 			// number
-			if (/^\d+(\.\d+)?|\.\d+/.test(s)) {
-				const value = s.match(/^\d+(\.\d+)?|\.\d+/)[0];
+			if (/^(\d+(\.\d+)?|\.\d+)/.test(s)) {
+				const value = s.match(/^(\d+(\.\d+)?|\.\d+)/)[0];
 				cur = cur.next = new Token(TK.NUM, value, parseFloat(value));
 				i += value.length;
 				continue;
@@ -244,13 +246,15 @@
 		return relational();
 	}
 
-	// relational = concat ("=" concat | "<" concat | ">" concat | "<=" concat | ">=" concat)*
+	// relational = concat ("=" concat | "<>"" concat | "<" concat | ">" concat | "<=" concat | ">=" concat)*
 	// T->1, F->0
 	function relational() {
 		let value = concat();
 		while (true) {
 			if (consume('=')) {
 				value = value === concat() ? 1: 0;
+			} else if (consume('<>')) {
+				value = value !== concat() ? 1 : 0;
 			} else if (consume('<')) {
 				value = value < concat() ? 1 : 0;
 			} else if (consume('>')) {
@@ -437,11 +441,60 @@
 				}
 				return 0;
 			}
-			// if (func === 'SUM') {
-			// 	if (args.length < 1) {
-			// 		throw new Error('SUM takes 1 or more arguments');
-			// 	}
-			// 	for (const arg of args) {
+			if (func === "FIND") {
+				if (args.length !== 2 && args.length !== 3) {
+					throw new Error('FIND takes 2 or 3 arguments');
+				}
+				let start = 1;
+				if (args.length === 3) {
+					if (typeof args[2] !== 'number') {
+						throw new Error('FIND argument 3 must be number');
+					}
+					start = args[2] > 1 ? Math.floor(args[2]) : 1;
+				}
+				if (typeof args[0] !== 'string' || typeof args[1] !== 'string') {
+					throw new Error('FIND takes string');
+				}
+				let index = args[1].slice(start-1).indexOf(args[0]);
+				if (index === -1) {
+					return 0;
+				}
+				return index + start;
+			}
+			if (func === "INT") {
+				if (args.length !== 1) {
+					throw new Error('INT takes 1 argument');
+				}
+				if (typeof args[0] !== 'number') {
+					throw new Error('INT takes number');
+				}
+				return Math.floor(args[0]);
+			}
+			if (func === "ROUND") {
+				if (args.length !== 1 && args.length !== 2) {
+					throw new Error('ROUND takes 1 or 2 arguments');
+				}
+				if (typeof args[0] !== 'number') {
+					throw new Error('ROUND takes number');
+				}
+				let digit = 0;
+				if (args.length === 2) {
+					if (typeof args[1] !== 'number') {
+						throw new Error('ROUND argument 2 must be number');
+					}
+					digit = Math.floor(args[1]);
+				}
+				return Math.round(args[0] * Math.pow(10, digit)) / Math.pow(10, digit);
+			}
+			if (func === "ABS") {
+				if (args.length !== 1) {
+					throw new Error('ABS takes 1 argument');
+				}
+				if (typeof args[0] !== 'number') {
+					throw new Error('ABS takes number');
+				}
+				return Math.abs(args[0]);
+			}
 		}
 		throw new Error('unexpected token');
 	}
