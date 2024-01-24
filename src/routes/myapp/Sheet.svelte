@@ -90,6 +90,16 @@
 		return cells[row][col];
 	}
 
+	function rangeToIndices(str) {
+		str = str.toUpperCase();
+		const [start, end] = str.split(':');
+		const i1 = parseInt(start.match(/\d+/)[0], 10) - 1;
+		const j1 = start.match(/[A-Z]+/)[0].split('').reduce((acc, char) => acc * 26 + char.charCodeAt(0) - 65 + 1, 0) - 1;
+		const i2 = parseInt(end.match(/\d+/)[0], 10) - 1;
+		const j2 = end.match(/[A-Z]+/)[0].split('').reduce((acc, char) => acc * 26 + char.charCodeAt(0) - 65 + 1, 0) - 1;
+		return [i1, j1, i2, j2];
+	}
+
 	function onRawValueChanged(event) {
 		const { cell } = event.detail;
 		updateValue(cell);
@@ -103,8 +113,9 @@
 		NUM: 1,
 		STR: 2,
 		VAR: 3,
-		FUNC: 4,
-		EOF: 5,
+		RANGE: 4,
+		FUNC: 5,
+		EOF: 6,
 	});
 
 	class Token {
@@ -119,7 +130,7 @@
 	function readFunc(str) {
 		const funcs = ["IF", "NOT", "AND", "OR", "FIND", "INT", "ROUND", "ABS",
 			"SUM", "AVERAGE", "MAX", "MIN", "COUNT", "COUNTIF", "INDEX",
-			"LOOKUP", "VLOOKUP", "MATCH"];
+			"LOOKUP", "VLOOKUP", "MATCH", "SUMIF", "AVERAGEIF"];
 		for (const f of funcs) {
 			if (str.toUpperCase().startsWith(f)) {
 				return f.length;
@@ -130,7 +141,7 @@
 
 	function readPunct(str) {
 		const kw2 = ["<=", ">=", "<>"];
-		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", ":", "&", ","];
+		const kw1 = ["<", ">", "=", "(", ")", "+", "-", "*", "/", "&", ","];
 		for (const k of kw2) {
 			if (str.startsWith(k)) {
 				return k.length;
@@ -179,6 +190,19 @@
 				str = str.match(/^[^']*/)[0];
 				cur = cur.next = new Token(TK.STR, str);
 				i += str.length + 2;
+				continue;
+			}
+			// range
+			if (/^[a-zA-Z]\d+:[a-zA-Z]\d+/.test(s)) {
+				const value = s.match(/^[a-zA-Z]\d+:[a-zA-Z]\d+/)[0];
+				cur = cur.next = new Token(TK.RANGE, value);
+				const [i1,j1,i2,j2] = rangeToIndices(value);
+				for (let i = i1; i <= i2; i++) {
+					for (let j = j1; j <= j2; j++) {
+						refs.add(String.fromCharCode(j + 65) + (i + 1));
+					}
+				}
+				i += value.length;
 				continue;
 			}
 			// variable
@@ -351,7 +375,7 @@
 		return primary();
 	}
 
-	// primary = num | var | str | "(" expr ")" | func "(" expr ("," expr)* ")"
+	// primary = num | var | str | "(" expr ")" | func "(" (expr | range) ("," (expr | range))* ")"
 	function primary() {
 		if (tok.type === TK.NUM) {
 			const value = tok.value;
@@ -384,22 +408,43 @@
 			}
 			const args = [];
 			if (!consume(')')) {
-				args.push(expr());
-				while (consume(',')) {
+				if (tok.type === TK.RANGE) {
+					const [i1,j1,i2,j2] = rangeToIndices(tok.str);
+					args.push([i1, j1, i2, j2]);
+					tok = tok.next;
+				} else {
 					args.push(expr());
+				}
+				while (consume(',')) {
+					if (tok.type === TK.RANGE) {
+						const [i1,j1,i2,j2] = rangeToIndices(tok.str);
+						args.push([i1, j1, i2, j2]);
+						tok = tok.next;
+					} else {
+						args.push(expr());
+					}
 				}
 				if (!consume(')')) {
 					throw new Error('missing )');
 				}
 			}
 			if (func === 'IF') {
-				if (args.length < 2) {
-					throw new Error('IF takes 2 or 3 arguments');
+				if (args.length !== 2 && args.length !== 3) {
+					throw new Error('IF takes 2 or 3 args');
+				}
+				if (typeof args[0] !== 'number') {
+					throw new Error('IF arg1 takes number');
 				}
 				if (args[0] !== 0) {
+					if (typeof args[1] === 'object') {
+						throw new Error('IF arg2 takes number or string');
+					}
 					return args[1];
 				}
 				if (args.length === 3) {
+					if (typeof args[2] === 'object') {
+						throw new Error('IF arg3 takes number or string');
+					}
 					return args[2];
 				}
 				return 0;
@@ -448,12 +493,12 @@
 				let start = 1;
 				if (args.length === 3) {
 					if (typeof args[2] !== 'number') {
-						throw new Error('FIND argument 3 must be number');
+						throw new Error('FIND arg3 must be number');
 					}
 					start = args[2] > 1 ? Math.floor(args[2]) : 1;
 				}
 				if (typeof args[0] !== 'string' || typeof args[1] !== 'string') {
-					throw new Error('FIND takes string');
+					throw new Error('FIND arg1 and arg2 must be string');
 				}
 				let index = args[1].slice(start-1).indexOf(args[0]);
 				if (index === -1) {
@@ -494,6 +539,28 @@
 					throw new Error('ABS takes number');
 				}
 				return Math.abs(args[0]);
+			}
+			if (func === "SUM") {
+				if (args.length === 0) {
+					throw new Error('SUM takes 1 or more arguments');
+				}
+				let sum = 0;
+				for (const arg of args) {
+					// argが文字列の場合は無視する
+					if (typeof arg === 'number') {
+						sum += arg;
+					} else if (typeof arg === 'object') {
+						const [i1,j1,i2,j2] = arg;
+						for (let i = i1; i <= i2; i++) {
+							for (let j = j1; j <= j2; j++) {
+								if (typeof cells[i][j].value === 'number') {
+									sum += cells[i][j].value;
+								} 
+							}
+						}
+					}
+				}
+				return sum;
 			}
 		}
 		throw new Error('unexpected token');
