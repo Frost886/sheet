@@ -562,6 +562,97 @@
 				}
 				return sum;
 			}
+			if (func === "AVERAGE") {
+				if (args.length === 0) {
+					throw new Error('AVERAGE takes 1 or more arguments');
+				}
+				let sum = 0;
+				let count = 0;
+				for (const arg of args) {
+					// argが文字列の場合は無視する
+					if (typeof arg === 'number') {
+						sum += arg;
+						count++;
+					} else if (typeof arg === 'object') {
+						const [i1,j1,i2,j2] = arg;
+						for (let i = i1; i <= i2; i++) {
+							for (let j = j1; j <= j2; j++) {
+								if (typeof cells[i][j].value === 'number') {
+									sum += cells[i][j].value;
+									count++;
+								} 
+							}
+						}
+					}
+				}
+				return sum / count;
+			}
+			if (func === "COUNT") {
+				if (args.length === 0) {
+					throw new Error('COUNT takes 1 or more arguments');
+				}
+				let count = 0;
+				for (const arg of args) {
+					// argが文字列の場合は無視する
+					if (typeof arg === 'number') {
+						count++;
+					} else if (typeof arg === 'object') {
+						const [i1,j1,i2,j2] = arg;
+						for (let i = i1; i <= i2; i++) {
+							for (let j = j1; j <= j2; j++) {
+								if (typeof cells[i][j].value === 'number') {
+									count++;
+								} 
+							}
+						}
+					}
+				}
+				return count;
+			}
+			if (func === "MAX") {
+				if (args.length === 0) {
+					throw new Error('MAX takes 1 or more arguments');
+				}
+				let max = -Infinity;
+				for (const arg of args) {
+					// argが文字列の場合は無視する
+					if (typeof arg === 'number') {
+						max = Math.max(max, arg);
+					} else if (typeof arg === 'object') {
+						const [i1,j1,i2,j2] = arg;
+						for (let i = i1; i <= i2; i++) {
+							for (let j = j1; j <= j2; j++) {
+								if (typeof cells[i][j].value === 'number') {
+									max = Math.max(max, cells[i][j].value);
+								} 
+							}
+						}
+					}
+				}
+				return max;
+			}
+			if (func === "MIN") {
+				if (args.length === 0) {
+					throw new Error('MIN takes 1 or more arguments');
+				}
+				let min = Infinity;
+				for (const arg of args) {
+					// argが文字列の場合は無視する
+					if (typeof arg === 'number') {
+						min = Math.min(min, arg);
+					} else if (typeof arg === 'object') {
+						const [i1,j1,i2,j2] = arg;
+						for (let i = i1; i <= i2; i++) {
+							for (let j = j1; j <= j2; j++) {
+								if (typeof cells[i][j].value === 'number') {
+									min = Math.min(min, cells[i][j].value);
+								} 
+							}
+						}
+					}
+				}
+				return min;
+			}
 		}
 		throw new Error('unexpected token');
 	}
