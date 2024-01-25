@@ -707,6 +707,32 @@
 				}
 				throw new Error('MATCH key not found');
 			}
+			if (func === "VLOOKUP") {
+				if (args.length !== 3) {
+					throw new Error('VLOOKUP takes 3 arguments');
+				}
+				if (typeof args[0] === 'object') {
+					throw new Error('VLOOKUP arg1 must be number or string');
+				}
+				if (typeof args[1] !== 'object') {
+					throw new Error('VLOOKUP arg2 must be range');
+				}
+				if (typeof args[2] !== 'number') {
+					throw new Error('VLOOKUP arg3 must be number');
+				}
+				const key = args[0];
+				const [i1,j1,i2,j2] = args[1];
+				const k = Math.floor(args[2]);
+				if (k < 1 || (j2 - j1 + 1) < k) {
+					throw new Error('VLOOKUP arg3 out of range');
+				}
+				for (let i = i1; i <= i2; i++) {
+					if (cells[i][j1].value === key) {
+						return cells[i][j1 + k - 1].value;
+					}
+				}
+				throw new Error('VLOOKUP key not found');
+			}
 		}
 		throw new Error('unexpected token');
 	}
