@@ -2,7 +2,7 @@
 	import CellInput from './CellInput.svelte';
 	import Papa from 'papaparse';
 
-	let cells = new Array(50).fill(null).map(() =>
+	let cells = new Array(300).fill(null).map(() =>
 		new Array(26).fill(null).map(() => ({
 			value: '',
 			rawValue: '',
@@ -45,7 +45,7 @@
 				complete: function(results) {
 					for (let i = 0; i < cells.length; i++) {
 						for (let j = 0; j < cells[i].length; j++) {
-							if (results.data[i][j] === undefined) {
+							if (results.data.length <= i || results.data[i].length <= j) {
 								cells[i][j].rawValue = '';
 							} else {
 								cells[i][j].rawValue = results.data[i][j];
