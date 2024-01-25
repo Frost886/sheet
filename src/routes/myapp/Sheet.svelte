@@ -653,6 +653,60 @@
 				}
 				return min;
 			}
+			if (func === "INDEX") {
+				if (args.length !== 3) {
+					throw new Error('INDEX takes 3 arguments');
+				}
+				if (typeof args[0] !== 'object') {
+					throw new Error('INDEX arg1 must be range');
+				}
+				if (typeof args[1] !== 'number') {
+					throw new Error('INDEX arg2 must be number');
+				}
+				if (typeof args[2] !== 'number') {
+					throw new Error('INDEX arg3 must be number');
+				}
+				const [i1,j1,i2,j2] = args[0];
+				const k = Math.floor(args[1]);
+				const l = Math.floor(args[2]);
+				if (k < 1 || (i2 - i1 + 1) < k) {
+					throw new Error('INDEX arg2 out of range');
+				}
+				if (l < 1 || (j2 - j1 + 1) < l) {
+					throw new Error('INDEX arg3 out of range');
+				}
+				return cells[i1 + k - 1][j1 + l - 1].value;
+			}
+			if (func === "MATCH") {
+				if (args.length !== 2) {
+					throw new Error('MATCH takes 2 arguments');
+				}
+				if (typeof args[0] === 'object') {
+					throw new Error('MATCH arg1 must be number or string');
+				}
+				if (typeof args[1] !== 'object') {
+					throw new Error('MATCH arg2 must be range');
+				}
+				const [i1,j1,i2,j2] = args[1];
+				if (i1 !== i2 && j1 !== j2) {
+					throw new Error('MATCH arg2 must be row or column');
+				}
+				const key = args[0];
+				if (i1 === i2) {
+					for (let j = j1; j <= j2; j++) {
+						if (cells[i1][j].value === key) {
+							return j - j1 + 1;
+						}
+					}
+				} else {
+					for (let i = i1; i <= i2; i++) {
+						if (cells[i][j1].value === key) {
+							return i - i1 + 1;
+						}
+					}
+				}
+				throw new Error('MATCH key not found');
+			}
 		}
 		throw new Error('unexpected token');
 	}
