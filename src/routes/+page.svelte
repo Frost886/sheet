@@ -1,59 +1,43 @@
-<script>
-	import Counter from './Counter.svelte';
-	import welcome from '$lib/images/svelte-welcome.webp';
-	import welcome_fallback from '$lib/images/svelte-welcome.png';
-</script>
-
 <svelte:head>
-	<title>Home</title>
-	<meta name="description" content="Svelte demo app" />
+	<title>About</title>
+	<meta name="description" content="About this app" />
 </svelte:head>
 
-<section>
-	<h1>
-		<span class="welcome">
-			<picture>
-				<source srcset={welcome} type="image/webp" />
-				<img src={welcome_fallback} alt="Welcome" />
-			</picture>
-		</span>
+<script>
+	import Sheet from './Sheet.svelte';
+</script>
 
-		to your new<br />SvelteKit app
-	</h1>
-
-	<h2>
-		try editing <strong>src/routes/+page.svelte</strong>
-	</h2>
-
-	<Counter />
-</section>
-
+<div class="container">
+	<Sheet/>
+</div>
 <style>
-	section {
+	.sheet {
 		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		flex: 0.6;
-	}
-
-	h1 {
+		justify-content: left;
 		width: 100%;
 	}
 
-	.welcome {
-		display: block;
-		position: relative;
-		width: 100%;
-		height: 0;
-		padding: 0 0 calc(100% * 495 / 2048) 0;
+	.container {
+		max-height: 50em;
+		border: 1px solid #dadada;
+		overflow: scroll;
+		overflow-x: scroll;
+		overflow-y: scroll;
 	}
 
-	.welcome img {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		top: 0;
-		display: block;
+	/* Overwrite the default to keep the scrollbar always visible */
+
+	::-webkit-scrollbar {
+		-webkit-appearance: none;
+		width: 7px;
+		height: 7px;
 	}
+
+	::-webkit-scrollbar-thumb {
+		border-radius: 4px;
+		background-color: rgba(0, 0, 0, 0.5);
+		-webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+	}
+
+
 </style>
