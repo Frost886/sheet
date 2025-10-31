@@ -1,6 +1,6 @@
 <svelte:head>
-	<title>About</title>
-	<meta name="description" content="About this app" />
+	<title>Sheet</title>
+	<meta name="description" content="A sheet app made by Svelte." />
 </svelte:head>
 
 <script>

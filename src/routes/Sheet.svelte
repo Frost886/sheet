@@ -842,6 +842,7 @@
 	<button on:click={saveCsv}>Save</button>
 	<button on:click={loadCsvFromFile}>Load</button>
 	<button on:click={loadCsvTests}>Load tests.csv</button>
+	<a href="https://github.com/Frost886/tus/tree/main/svelte/my-app">GitHub</a>
 </div>
 <table>
 	<thead>
