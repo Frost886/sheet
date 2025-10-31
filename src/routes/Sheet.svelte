@@ -36,31 +36,56 @@
 		a.click();
 	}
 
-	function loadCsv() {
+	function loadCsv(csv) {
+		// csvの中身を読み込む
+		Papa.parse(csv, {
+			complete: function(results) {
+				for (let i = 0; i < cells.length; i++) {
+					for (let j = 0; j < cells[i].length; j++) {
+						if (results.data.length <= i || results.data[i].length <= j) {
+							cells[i][j].rawValue = '';
+						} else {
+							cells[i][j].rawValue = results.data[i][j];
+						}
+						cells[i][j].value = '';
+						cells[i][j].parents = [];
+						cells[i][j].children = [];
+						cells[i][j].hasError = false;
+					}
+				}
+				updateAll();
+			}
+		});
+	}
+
+	function loadCsvFromFile() {
 		const input = document.createElement('input');
 		input.type = 'file';
 		input.accept = '.csv';
 		input.onchange = () => {
-			Papa.parse(input.files[0], {
-				complete: function(results) {
-					for (let i = 0; i < cells.length; i++) {
-						for (let j = 0; j < cells[i].length; j++) {
-							if (results.data.length <= i || results.data[i].length <= j) {
-								cells[i][j].rawValue = '';
-							} else {
-								cells[i][j].rawValue = results.data[i][j];
-							}
-							cells[i][j].value = '';
-							cells[i][j].parents = [];
-							cells[i][j].children = [];
-							cells[i][j].hasError = false;
-						}
-					}
-					updateAll();
-				}
-			})
+			// ファイルの拡張子を除いた名前をテキストボックス(fileName)に入力
+			const name = input.files[0].name;
+			const index = name.lastIndexOf('.');
+			fileName = index === -1 ? name : name.substring(0, index);
+
+			// csvの中身を読み込む
+			loadCsv(input.files[0]);
 		};
 		input.click();
+	}
+
+	function loadCsvTests() {
+		const csvUrl = "/data/tests.csv";
+		fetch(csvUrl)
+			.then(response => {
+				if (!response.ok) throw new Error("CSVファイルが見つかりません");
+				return response.text();
+			})
+			.then(csvText => {
+				loadCsv(csvText);
+				fileName = "tests";
+			})
+			.catch(err => console.error("読み込みエラー：", err));
 	}
 
 	function updateAll() {
@@ -815,7 +840,8 @@
 <div class="top-bar">
 	<input type="text" bind:value={fileName} placeholder="untitled" />.csv
 	<button on:click={saveCsv}>Save</button>
-	<button on:click={loadCsv}>Load</button>
+	<button on:click={loadCsvFromFile}>Load</button>
+	<button on:click={loadCsvTests}>Load tests.csv</button>
 </div>
 <table>
 	<thead>
