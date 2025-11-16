@@ -1,6 +1,7 @@
 <script>
 	import CellInput from './CellInput.svelte';
 	import Papa from 'papaparse';
+	import { base } from '$app/paths';
 
 	let cells = new Array(300).fill(null).map(() =>
 		new Array(26).fill(null).map(() => ({
