@@ -75,7 +75,7 @@
 	}
 
 	function loadCsvTests() {
-		const csvUrl = "{base}/data/tests.csv";
+		const csvUrl = `${base}/data/tests.csv`;
 		fetch(csvUrl)
 			.then(response => {
 				if (!response.ok) throw new Error("CSVファイルが見つかりません");
