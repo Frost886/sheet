@@ -18,11 +18,11 @@
 	}
 
 	.container {
-		max-height: 50em;
+		height: 98.5vh;
+		max-height: none;
+		width: 100%;
 		border: 1px solid #dadada;
-		overflow: scroll;
-		overflow-x: scroll;
-		overflow-y: scroll;
+		overflow: auto;
 	}
 
 	/* Overwrite the default to keep the scrollbar always visible */
