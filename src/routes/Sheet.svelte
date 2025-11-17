@@ -75,8 +75,8 @@
 		input.click();
 	}
 
-	function loadCsvTests() {
-		const csvUrl = `${base}/data/tests.csv`;
+	function loadCsvFunctions() {
+		const csvUrl = `${base}/data/functions.csv`;
 		fetch(csvUrl)
 			.then(response => {
 				if (!response.ok) throw new Error("CSVファイルが見つかりません");
@@ -84,7 +84,7 @@
 			})
 			.then(csvText => {
 				loadCsv(csvText);
-				fileName = "tests";
+				fileName = "functions";
 			})
 			.catch(err => console.error("読み込みエラー：", err));
 	}
@@ -842,7 +842,7 @@
 	<input type="text" bind:value={fileName} placeholder="untitled" />.csv
 	<button on:click={saveCsv}>Save</button>
 	<button on:click={loadCsvFromFile}>Load</button>
-	<button on:click={loadCsvTests}>Load tests.csv</button>
+	<button on:click={loadCsvFunctions}>functions.csv</button>
 	<a href="https://github.com/Frost886/sheet" target="_blank" rel="noopener noreferrer">GitHub</a>
 </div>
 <table>
